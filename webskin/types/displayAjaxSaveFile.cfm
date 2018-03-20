@@ -7,7 +7,7 @@
 <cfimport taglib="/farcry/core/tags/core" prefix="core" />
 
 <cfset stProps = application.stcoapi[url.type].stprops>
-<cfset targetProperty = application.formtools.s3arrayUpload.oFactory.getTargetProperty(stMetadata={ "ftJoin" = url.type }) />
+<cfset targetProperty = application.formtools.azurearrayupload.oFactory.getTargetProperty(stMetadata={ "ftJoin" = url.type }) />
 
 <!--- find out the target property --->
 <cfset stNewObject = application.fapi.getNewContentObject(typename=url.type,objectid=createUUID()) />

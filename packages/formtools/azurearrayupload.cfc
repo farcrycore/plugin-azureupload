@@ -30,7 +30,7 @@
 		<cfset var ftMaxSize = arguments.stMetadata.ftMaxSize />
 		<cfset var ftSecure = arguments.stMetadata.ftSecure />
 
-		<cfif targetPropertyType eq "s3upload">
+		<cfif targetPropertyType eq "azureupload">
 			<cfif arguments.stMetadata.ftLocation eq "auto">
 				<cfset arguments.stMetadata.ftLocation = application.fapi.getPropertyMetadata(typename=targetType, property=targetProperty, md="ftLocation") />
 			</cfif>
@@ -167,8 +167,8 @@
 		</cfscript>
 
 		<skin:loadJS id="fc-jquery-ui" />
-		<skin:loadJS id="s3uploadJS" />
-		<skin:loadCSS id="s3uploadCSS" />
+		<skin:loadJS id="azureuploadJS" />
+		<skin:loadCSS id="azureuploadCSS" />
 
 		<cfset joinItems = getJoinList(arguments.stObject[arguments.stMetadata.name]) />
 
@@ -181,7 +181,7 @@
 						class="arrayDetailView"
 						style="list-style-type:none;border-bottom:1px solid ##ebebeb;border-width:1px 1px 0px 1px;margin:0px;">
 
-						<div id="#arguments.fieldname#-container" class="s3upload upload-empty" style="padding-top:10px;">
+						<div id="#arguments.fieldname#-container" class="azureupload upload-empty" style="padding-top:10px;">
 							<div id="upload-placeholder" class="upload-placeholder">
 								<div class="upload-placeholder-message">
 									#placeholderAddLabel#
@@ -330,7 +330,7 @@
 				</script>
 
 				<script>
-					s3upload($j, plupload, {
+					azureupload($j, plupload, {
 						url : "#bucketEndpoint#",
 						fieldname: "#arguments.fieldname#",
 						uploadpath: "#fileUploadPath#",
@@ -550,7 +550,7 @@
 		<cfset stProps = application.stCOAPI[listFirst(arguments.stMetadata.ftJoin)].stProps />
 
 		<cfloop collection="#application.stCOAPI[arguments.stMetadata.ftJoin].stProps#" item="thisprop">
-			<cfif application.fapi.getPropertyMetadata(typename=arguments.stMetadata.ftJoin, property=thisprop, md="ftS3UploadTarget", default=false)>
+			<cfif application.fapi.getPropertyMetadata(typename=arguments.stMetadata.ftJoin, property=thisprop, md="ftAzureUploadTarget", default=false)>
 				<cfreturn thisprop />
 			</cfif>
 		</cfloop>
@@ -561,7 +561,7 @@
 			</cfif>
 		</cfloop>
 
-		<cfthrow message="No target property was specified with a ftS3UploadTarget or ftBulkUploadTarget attribute." />
+		<cfthrow message="No target property was specified with a ftAzureUploadTarget or ftBulkUploadTarget attribute." />
 	</cffunction>
 
 	<cffunction name="getFileLocation" access="public" output="false" returntype="struct" hint="Returns information used to access the file: type (stream | redirect), path (file system path | absolute URL), filename, mime type">

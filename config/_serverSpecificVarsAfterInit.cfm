@@ -23,7 +23,7 @@
 <cfimport taglib="/farcry/core/tags/farcry" prefix="farcry" />
 <cfimport taglib="/farcry/core/tags/webskin" prefix="skin">
 
-<skin:registerJS id="s3uploadJS" lFiles="/farcry/plugins/s3upload/www/js/plupload-2.1.8/js/plupload.full.min.js,/farcry/plugins/s3upload/www/js/s3upload.js" />
-<skin:registerCSS id="s3uploadCSS" lFiles="/farcry/plugins/s3upload/www/css/s3upload.css" />     
+<skin:registerJS id="azureuploadJS" lFiles="/farcry/plugins/azureupload/www/js/plupload-2.3.6/js/plupload.full.min.js,/farcry/plugins/azureupload/www/js/azureupload.js" />
+<skin:registerCSS id="azureuploadCSS" lFiles="/farcry/plugins/azureupload/www/css/azureupload.css" />     
 
 <cfsetting enablecfoutputonly="no">

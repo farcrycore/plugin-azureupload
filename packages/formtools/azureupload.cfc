@@ -1,4 +1,4 @@
-<cfcomponent displayname="S3 Upload" extends="farcry.core.packages.formtools.field" output="false">
+<cfcomponent displayname="Azure Upload" extends="farcry.core.packages.formtools.field" output="false">
 
 	<cfproperty name="ftAllowedFileExtensions" default="jpg,jpeg,png,gif,pdf,doc,ppt,xls,docx,pptx,xlsx,zip,rar,mp3,mp4,m4v,avi">
 	<cfproperty name="ftDestination" default="" hint="Destination of file store relative of secure/public locations.">
@@ -8,7 +8,7 @@
 	<cfproperty name="ftMaxSize" default="104857600" hint="Maximum filesize upload in bytes.">
 	<cfproperty name="ftSecure" default="false" hint="Store files securely outside of public webspace.">
 	<cfproperty name="ftLocation" default="auto" hint="Store files in a specific CDN location. If set to 'auto', this value will be derived from the target property." />
-	<cfproperty name="ftS3UploadTarget" default="false" hint="Allow the property to be joined with array upload.">
+	<cfproperty name="ftAzureUploadTarget" default="false" hint="Allow the property to be joined with array upload.">
 
 
 	<cffunction name="init" output="false">
@@ -46,50 +46,12 @@
 			var cdnConfig = application.fc.lib.cdn.getLocation(cdnLocation);
 			cdnConfig.urlExpiry = 1800
 
-			var utils = new s3.utils();
-			var awsSigning = new s3.awsSigning(cdnConfig.accessKeyID, cdnConfig.awsSecretKey, utils);
-
 			var fileUploadPath = "#cdnConfig.pathPrefix##arguments.stMetadata.ftDestination#";
 			if (left(fileUploadPath, 1) == "/") {
 				fileUploadPath = mid(fileUploadPath, 2, len(fileUploadPath)-1);
 			}
 
-			var isoTime = utils.iso8601();
-			var expiry = cdnConfig.urlExpiry;
-
-			var params = awsSigning.getAuthorizationParams( "s3", "ap-southeast-2", isoTime );
-			params[ 'X-Amz-SignedHeaders' ] = 'host';
-
-			// create policy and add the encoded policy to the query params
-			var expiration = dateConvert("local2utc", dateAdd("s", expiry, now()));
-			var policy = {
-				"expiration": dateFormat(expiration, "yyyy-mm-dd") & "T" & timeFormat(expiration, "HH:mm:ss") & "Z",
-				"conditions": [
-					{"x-amz-credential": "#params["X-Amz-Credential"]#"},
-					{"x-amz-algorithm": "#params["X-Amz-Algorithm"]#"},
-					{"x-amz-date": "#params["X-Amz-Date"]#" },
-					{"x-amz-signedheaders": "#params["X-Amz-SignedHeaders"]#" },
-
-					{ "acl": "#aclPermission#" },
-					{ "bucket": "#cdnConfig.bucket#" },
-					[ "starts-with", "$key", "#fileUploadPath#" ],
-
-					{ "success_action_status": javaCast("string", "201") },
-					[ "starts-with", "$Content-Type", "" ],
-					[ "starts-with", "$filename", "#fileUploadPath#" ],
-					[ "starts-with", "$name", "#fileUploadPath#" ]
-				]
-			};
-			if (arguments.stMetadata.ftMaxSize > 0) {
-				arrayAppend(policy.conditions, [ "content-length-range", 0, javaCast("integer", arguments.stMetadata.ftMaxSize) ])
-			}
-
-			var serializedPolicy = serializeJSON(policy);
-			serializedPolicy = reReplace(serializedPolicy, "[\r\n]+", "", "all");
-			params[ 'Policy' ] = binaryEncode(charsetDecode(serializedPolicy, "utf-8"), "base64");
-			params[ 'X-Amz-Signature' ] = awsSigning.sign( isoTime.left( 8 ), "ap-southeast-2", "s3", params[ 'Policy' ] );
-
-			var bucketEndpoint = "https://s3-ap-southeast-2.amazonaws.com/#cdnConfig.bucket#";
+			var uploadEndpoint = "https://#cdnConfig.account#.blob.core.windows.net/#cdnConfig.container#";
 
 			var ftMin = 0;
 			var ftMax = arguments.stMetadata.ftMax;
@@ -107,8 +69,8 @@
 
 		</cfscript>
 
-		<skin:loadJS id="s3uploadJS" />
-		<skin:loadCSS id="s3uploadCSS" />
+		<skin:loadJS id="azureuploadJS" />
+		<skin:loadCSS id="azureuploadCSS" />
 
 		<cfif arguments.stMetadata.ftMaxHeight gt 0>
 			<cfoutput>
@@ -126,7 +88,7 @@
 
 				<!--- UPLOADER UI --->
 				<div class="multiField">
-				<div id="#arguments.fieldname#-container" class="s3upload upload-empty">
+				<div id="#arguments.fieldname#-container" class="azureupload upload-empty">
 					<div id="upload-placeholder" class="upload-placeholder">
 						<div class="upload-placeholder-message">
 							#placeholderAddLabel#
@@ -207,8 +169,8 @@
 				</script>
 
 				<script>
-					s3upload($j, plupload, {
-						url : "#bucketEndpoint#",
+					azureupload($j, plupload, {
+						url : "#uploadEndpoint#",
 						fieldname: "#arguments.fieldname#",
 						uploadpath: "#fileUploadPath#",
 						location: "#cdnLocation#",
@@ -216,19 +178,9 @@
 						nameconflict: "#arguments.stMetadata.ftNameConflict#",
 						maxfiles: #ftMax#,
 						multipart_params: {
-							"acl" : "#aclPermission#",
 							"key": "#fileUploadPath#/${filename}",
 							"name": "#fileUploadPath#/${filename}",
-							"filename": "#fileUploadPath#/${filename}",
-
-							"success_action_status": "201",
-							"X-Amz-Algorithm": "#params["X-Amz-Algorithm"]#",
-							"X-Amz-Credential": "#params["X-Amz-Credential"]#",
-							"X-Amz-Date": "#params["X-Amz-Date"]#",
-
-							"Policy": "#params["Policy"]#",
-							"X-Amz-Signature": "#params["X-Amz-Signature"]#",
-							"X-Amz-SignedHeaders": "#params["X-Amz-SignedHeaders"]#"
+							"filename": "#fileUploadPath#/${filename}"
 						},
 						filters: {
 							max_file_size : "#arguments.stMetadata.ftMaxSize#",
@@ -250,7 +202,7 @@
 										)).trigger("filechange", [{
 											value : "#arguments.stMetadata.ftDestination#/" + file.name,
 											filename : file.name,
-											fullpath : "#bucketEndpoint#/" + file.name,
+											fullpath : "#uploadEndpoint#/" + file.name,
 											width : file.width,
 											height : file.height,
 											size : file.size

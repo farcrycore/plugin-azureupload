@@ -10,7 +10,7 @@
 		<cfset stTargetProps = application.stcoapi[stobj.typename].stprops>
 
 		<cfif stProps[form.property].metadata.type EQ "array" 
-			  AND stProps[form.property].metadata.fttype EQ "s3arrayUpload"
+			  AND stProps[form.property].metadata.fttype EQ "azurearrayupload"
 			  AND structKeyExists(stProps[form.property].metadata,"ftJoin") AND len(stProps[form.property].metadata.ftJoin)>
 
 			<cfquery name="deleteRelated" datasource="#application.dsn#">
@@ -26,7 +26,3 @@
 <cfcontent reset="true">
 <cfheader name="Content-Type" value="application/json">
 <cfoutput>#serializeJSON(result)#</cfoutput>
-
-
-
-

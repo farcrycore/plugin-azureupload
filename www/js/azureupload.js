@@ -1,4 +1,4 @@
-function s3upload($, plupload, options) {
+function azureupload($, plupload, options) {
 
 	options = options || {};
 	options.url = options.url || "";
@@ -26,6 +26,7 @@ function s3upload($, plupload, options) {
 	var uploader = new plupload.Uploader({
 		runtimes: "html5",
 		url: options.url,
+		http_method: "PUT",
 
 		container: options.fieldname + "-container",
 		browse_button: options.fieldname + "-upload-add",
@@ -36,7 +37,7 @@ function s3upload($, plupload, options) {
 
 		urlstream_upload: true,
 		file_data_name: "file",
-		multipart: true,
+		multipart: false,
 
 		multipart_params: options.multipart_params,
 		filters: options.filters
@@ -198,7 +199,7 @@ function s3upload($, plupload, options) {
 	}
 
 	function onPluploadBeforeUpload(uploader, file) {
-		var ajaxurl = options.fc.webroot  +  "&view=displayAjaxCDNUniqueFilename";
+		var ajaxurl = options.fc.webroot  +  "&view=displayAjaxCDNAzureUniqueFilename";
 
 		// get unique filename from the server
 		$.ajax({
@@ -220,9 +221,13 @@ function s3upload($, plupload, options) {
 				// set the unique filename in the file and uploaders
 				var uniqueKey = response.uploadpath + "/" + response.uniquefilename;
 				file.name = response.uniquefilename;
-				uploader.settings.multipart_params.key = uniqueKey;
-				uploader.settings.multipart_params.Filename = uniqueKey;
-				uploader.settings.multipart_params["Content-Type"] = getMIMEType(file.name);
+
+				uploader.settings.url = response.requestURL;
+				uploader.settings.headers = uploader.settings.headers || {};
+				uploader.settings.headers["x-ms-date"] = response.xmsdate;
+				uploader.settings.headers["x-ms-version"] = response.xmsversion;
+				uploader.settings.headers["x-ms-blob-type"] = "BlockBlob";
+				uploader.settings.headers["Content-Type"] = getMIMEType(file.name);
 
 				// trigger the upload
 				file.status = plupload.UPLOADING;
@@ -339,7 +344,7 @@ function s3upload($, plupload, options) {
 			// render a preview for a "small" image (less than 10MB)
 			// load image
 			var image = $(new Image());
-			var preview = new mOxie.Image();
+			var preview = new window.moxie.image.Image();
 			preview.onload = function() {
 				file.width = preview.width;
 				file.height = preview.height;
