@@ -42,6 +42,10 @@
 			<cfset application.fapi.throw(message="no '{1}' value defined",type="cdnconfigerror",detail=serializeJSON(sanitiseAzureConfig(arguments.config)),substituteValues=[ 'container' ]) />
 		</cfif>
 
+		<cfif not structkeyexists(st,"indexable")>
+			<cfset st.indexable = false />
+		</cfif>
+
 		<cfset st.domainType = "custom" />
 
 		<cfif structkeyexists(st,"security") and not listfindnocase("public,private",arguments.config.security)>
@@ -208,8 +212,7 @@
 			<cfset urlpath = replacelist(urlencodedformat(urlpath),"%2F,%2B,%2D,%2E,%5F,%27","/, ,-,.,_,'")>
 
 			<cfif structkeyexists(arguments.config,"security") and arguments.config.security eq "private">
-				<cfset expiryDate = DateConvert("utc2Local", DateAdd("s", arguments.config.urlExpiry, now())) />
-				<cfset expiryDate = DateFormat(expiryDate, "yyyy-mm-dd") & "T" & TimeFormat(expiryDate,"HH:mm:ss") & "Z" />
+				<cfset expiryDate = dateToRFC3339(DateAdd("s", arguments.config.urlExpiry, now())) />
 
 				<cfset binaryKey = binaryDecode(arguments.config.storageKey, "base64") />
 
@@ -792,7 +795,53 @@
 		<cfargument name="config" type="struct" required="true" />
 		<cfargument name="path" type="string" required="true" />
 
-		<cfreturn "/#arguments.config.account##arguments.path#" />
+		<cfreturn replaceList("/#arguments.config.account##arguments.path#", " ", "%20") />
+	</cffunction>
+
+	<cffunction name="dateToRFC3339" access="public" output="false" returntype="string">
+		<cfargument name="d" type="date" required="true" />
+
+		<cfset var asUTC = dateConvert("local2utc", arguments.d) />
+
+		<cfreturn dateformat(asUTC,"yyyy-mm-dd") & "T" & timeformat(asUTC,"HH:mm:ss") & "Z" />
+	</cffunction>
+
+	<cffunction name="rfc3339ToDate" access="public" output="false" returntype="date">
+		<cfargument name="input" type="date" required="true" />
+		<cfargument name="includeTime" type="boolean" required="false" default="true" />
+
+		<cfset var sdf = "" />
+		<cfset var pos = "" />
+		<cfset var rdate = "" />
+
+		<cfif arguments.includeTime>
+			<cfif not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$", arguments.input)>
+				<cfthrow message="Date/time must be in the form yyyy-MM-ddTHH:mm:ss.SSSZ: #arguments.input#" />
+			</cfif>
+		<cfelse>
+			<cfif not reFind("^\d{4}-\d{2}-\d{2}$", arguments.input)>
+				<cfthrow message="Date must be in the form yyyy-MM-dd: #arguments.input#" />
+			</cfif>
+		</cfif>
+
+		<cfif arguments.includeTime>
+			<cfif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", arguments.input)>
+				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss'Z'") />
+			<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1}Z$", arguments.input)>
+				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.S'Z'") />
+			<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{2}Z$", arguments.input)>
+				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SS'Z'") />
+			<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$", arguments.input)>
+				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") />
+			</cfif>
+		<cfelse>
+			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd") />
+		</cfif>
+		<cfset pos = CreateObject("java", "java.text.ParsePosition").init(0) />
+
+		<cfset rdate = sdf.parse(arguments.input, pos) />
+
+		<cfreturn application.fc.LIB.TIMEZONE.castFromUTC(rdate, application.fc.serverTimezone) />
 	</cffunction>
 
 </cfcomponent>

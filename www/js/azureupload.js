@@ -199,7 +199,7 @@ function azureupload($, plupload, options) {
 	}
 
 	function onPluploadBeforeUpload(uploader, file) {
-		var ajaxurl = options.fc.webroot  +  "&view=displayAjaxCDNAzureUniqueFilename";
+		var ajaxurl = options.fc.webroot + "&view=displayAjaxCDNAzureUniqueFilename";
 
 		// get unique filename from the server
 		$.ajax({
@@ -210,7 +210,9 @@ function azureupload($, plupload, options) {
 				"filename": sanitiseFilename(file.name),
 				"nameconflict": options.nameconflict,
 				"uploadpath": options.uploadpath,
-				"location": options.location
+				"location": options.location,
+				"objectid": options.fc.objectid,
+				"indexable": options.fc.indexable
 			},
 			success: function(response) {
 
@@ -227,7 +229,6 @@ function azureupload($, plupload, options) {
 				uploader.settings.headers["x-ms-date"] = response.xmsdate;
 				uploader.settings.headers["x-ms-version"] = response.xmsversion;
 				uploader.settings.headers["x-ms-blob-type"] = "BlockBlob";
-				uploader.settings.headers["x-ms-meta-objectid"] = options.fc.objectid;
 				if (response.metadata) {
 					for (var k in response.metadata) {
 						uploader.settings.headers[k] = response.metadata[k];

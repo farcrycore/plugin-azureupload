@@ -3,7 +3,6 @@
 <cfparam name="form.uploadpath" type="string">
 <cfparam name="form.location" type="string" default="publicfiles">
 
-
 <cfset pathWithoutCDNPrefix = form.uploadpath>
 <cfset cdnConfig = application.fc.lib.cdn.getLocation("#form.location#")>
 <cfif len(cdnConfig.pathPrefix)>
@@ -34,14 +33,15 @@
 <cfset canonicalizedResource = "/blob/#cdnConfig.account##path#" />
 
 <cfset signedpermissions = "rw">
-<cfset signedexpiry = "2018-04-01T00:00:00Z">
+
+<cfset signedexpiry = dateAdd("d", 1, utcDate) />
+<cfset signedexpiry = dateFormat(signedexpiry, "yyyy-mm-dd") & "T" & timeFormat(signedexpiry, "HH:mm:ss") & "Z" />
 
 <cfset stringToSign = "#signedpermissions#\n\n#signedexpiry#\n#canonicalizedResource#\n\n\n\n#xmsVersion#\n\n\n\n\n" />
 
 <cfset x = replace(stringToSign,"\n","#chr(10)#","all") />
 <cfset y = hmac(x,binaryKey,"HmacSHA256","utf-8") />
 <cfset requestSignature = toBase64(binaryDecode(y,"hex")) />
-
 
 <cfset result = {
 	"filename": "#form.filename#",
@@ -50,7 +50,10 @@
 	"requestURL": "https://#cdnConfig.account#.blob.core.windows.net#path#?sv=2017-04-17&sr=b&sp=#signedpermissions#&se=#encodeForURL(signedexpiry)#&sig=#urlEncodedFormat(requestSignature)#",
 	"xmsdate": "#xmsDate#",
 	"xmsversion": "#xmsVersion#",
-	"metadata": {}
+	"metadata": {
+		"x-ms-meta-AzureSearch_Skip": form.indexable ? "false" : "true",
+		"x-ms-meta-objectid": form.objectid
+	}
 }>
 
 <cfcontent reset="true">

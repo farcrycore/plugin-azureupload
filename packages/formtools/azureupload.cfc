@@ -9,6 +9,8 @@
 	<cfproperty name="ftSecure" default="false" hint="Store files securely outside of public webspace.">
 	<cfproperty name="ftLocation" default="auto" hint="Store files in a specific CDN location. If set to 'auto', this value will be derived from the target property." />
 	<cfproperty name="ftAzureUploadTarget" default="false" hint="Allow the property to be joined with array upload.">
+	<cfproperty name="indexable" default="true" hint="Allow the file to be indexed.">
+	<cfproperty name="ftSecure" default="false" hint="Store files securely outside of public webspace." />
 
 
 	<cffunction name="init" output="false">
@@ -25,45 +27,23 @@
 
 		<cfset var html = "">
 		<cfset var item = "">
+		<cfset var fileMeta = resolveLocationMetadata(argumentCollection=arguments) />
+
+		<cfset var ftMin = 0 />
+		<cfset var ftMax = arguments.stMetadata.ftMax />
+		<cfset var thumbWidth = 80 />
+		<cfset var thumbheight = 80 />
+		<cfset var cropMethod = 'fitinside' />
+		<cfset var format = 'jpg' />
+		<cfset var buttonAddLabel = "Add File" />
+		<cfset var placeholderAddLabel = """#buttonAddLabel#"" or drag and drop here" /><!--- TODO: for mobile / responsive there should be no mention of drag/drop  --->
 
 		<cfimport taglib="/farcry/core/tags/webskin" prefix="skin">
 
-		<cfscript>
-			var cdnLocation = "publicfiles";
-			var cdnPath = "";
+		<cfif ftMax gt 1>
+			<cfset buttonAddLabel = "Add Files" />
+		</cfif>
 
-			if (len(arguments.stMetadata.ftLocation) and arguments.stMetadata.ftLocation neq "auto") {
-				cdnLocation = arguments.stMetadata.ftLocation;
-			}
-			else if (arguments.stMetadata.ftSecure) {
-				cdnLocation = "privatefiles";
-			}
-
-			var cdnConfig = application.fc.lib.cdn.getLocation(cdnLocation);
-			cdnConfig.urlExpiry = 1800
-
-			var fileUploadPath = "#cdnConfig.pathPrefix##arguments.stMetadata.ftDestination#";
-			if (left(fileUploadPath, 1) == "/") {
-				fileUploadPath = mid(fileUploadPath, 2, len(fileUploadPath)-1);
-			}
-
-			var uploadEndpoint = "https://#cdnConfig.account#.blob.core.windows.net/#cdnConfig.container#";
-
-			var ftMin = 0;
-			var ftMax = arguments.stMetadata.ftMax;
-			var thumbWidth = 80;
-			var thumbheight = 80;
-			var cropMethod = 'fitinside';
-			var format = 'jpg';
-
-			var buttonAddLabel = "Add File";
-			if (ftMax > 1) {
-				buttonAddLabel = "Add Files";
-			}
-// TODO: for mobile / responsive there should be no mention of drag/drop 
-			var placeholderAddLabel = """#buttonAddLabel#"" or drag and drop here";
-
-		</cfscript>
 
 		<skin:loadJS id="azureuploadJS" />
 		<skin:loadCSS id="azureuploadCSS" />
@@ -166,17 +146,17 @@
 
 				<script>
 					azureupload($j, plupload, {
-						url : "#uploadEndpoint#",
+						url : "#fileMeta.uploadEndpoint#",
 						fieldname: "#arguments.fieldname#",
-						uploadpath: "#fileUploadPath#",
-						location: "#cdnLocation#",
+						uploadpath: "#fileMeta.fileUploadPath#",
+						location: "#fileMeta.cdnLocation#",
 						destinationpart: "#arguments.stMetadata.ftDestination#",
 						nameconflict: "#arguments.stMetadata.ftNameConflict#",
 						maxfiles: #ftMax#,
 						multipart_params: {
-							"key": "#fileUploadPath#/${filename}",
-							"name": "#fileUploadPath#/${filename}",
-							"filename": "#fileUploadPath#/${filename}"
+							"key": "#fileMeta.fileUploadPath#/${filename}",
+							"name": "#fileMeta.fileUploadPath#/${filename}",
+							"filename": "#fileMeta.fileUploadPath#/${filename}"
 						},
 						filters: {
 							max_file_size : "#arguments.stMetadata.ftMaxSize#",
@@ -188,8 +168,9 @@
 							"webroot": "#application.url.webroot#/index.cfm?ajaxmode=1",
 							"typename": "#arguments.typename#",
 							"objectid": "#arguments.stObject.objectid#",
-							"property": "#arguments.stMetadata.name#"
-							<cfif cdnLocation eq "images">
+							"property": "#arguments.stMetadata.name#",
+							"indexable": "#fileMeta.indexable#"
+							<cfif fileMeta.cdnLocation eq "images">
 								, "onFileUploaded" : function(file,item) {
 									if (window.$fc !== undefined && window.$fc.imageformtool !== undefined) {
 										$j($fc.imageformtool(
@@ -198,7 +179,7 @@
 										)).trigger("filechange", [{
 											value : "#arguments.stMetadata.ftDestination#/" + file.name,
 											filename : file.name,
-											fullpath : "#uploadEndpoint#/" + file.name,
+											fullpath : "#fileMeta.uploadEndpoint#/" + file.name,
 											width : file.width,
 											height : file.height,
 											size : file.size
@@ -354,9 +335,9 @@
 			"cdnPath" = ""
 		} />
 
-		<cfif len(arguments.stMetadata.ftLocation) and arguments.stMetadata.ftLocation neq "auto">
+		<cfif structKeyExists(arguments.stMetadata, "ftLocation") and arguments.stMetadata.ftLocation neq "auto">
 			<cfset stResult.cdnLocation = arguments.stMetadata.ftLocation />
-		<cfelseif arguments.stMetadata.ftSecure>
+		<cfelseif structKeyExists(arguments.stMetadata, "ftSecure") and arguments.stMetadata.ftSecure>
 			<cfset stResult.cdnLocation = "privatefiles" />
 		</cfif>
 
@@ -368,7 +349,31 @@
 			<cfset stResult.fileUploadPath = mid(stResult.fileUploadPath, 2, len(stResult.fileUploadPath)-1) />
 		</cfif>
 
+		<cfset stResult["uploadEndpoint"] = "https://#stResult.cdnConfig.account#.blob.core.windows.net/#stResult.cdnConfig.container#" />
+
+		<cfset stResult["indexable"] = stResult.cdnConfig.indexable and arguments.stMetadata.indexable />
+
 		<cfreturn stResult />
 	</cffunction>
 
-</cfcomponent> 
+	<cffunction name="updateTags" access="public" output="true" returntype="void">
+		<cfargument name="stObject" required="true" type="struct" hint="The object of the record that this field is part of.">
+		<cfargument name="stMetadata" required="true" type="struct" hint="This is the metadata that is either setup as part of the type.cfc or overridden when calling ft:object by using the stMetadata argument.">
+
+		<cfset var fileMeta = resolveLocationMetadata(argumentCollection=arguments) />
+
+		<cfif not len(arguments.stObject[arguments.stMetadata.name])>
+			<cfreturn />
+		</cfif>
+
+		<cfset application.fc.lib.cdn.cdns.azure.ioWriteMetadata(
+			config=fileMeta.cdnConfig,
+			file=arguments.stObject[arguments.stMetadata.name],
+			metadata={
+				"objectid"=arguments.stObject.objectid,
+				"AzureSearch_Skip": fileMeta.indexable ? "false" : "true"
+			}
+		) />
+	</cffunction>
+
+</cfcomponent>
