@@ -32,7 +32,6 @@ The following settings should be included in the `setLocation` configuration:
 		<tr><td>security</td><td>`private` or `public`, depending on how the container has been configured.</td></tr>
 		<tr><td>urlExpiry</td><td>The number of seconds that signed URLs should be valid for. Only needs to be set if security is private.</td></tr>
 		<tr><td>pathPrefix</td><td>As per normal location configuration. Note that if each location is in a different container (as recommended), no prefix is required.</td></tr>
-		<tr><td>pathPrefix</td><td>As per normal location configuration. Note that if each location is in a different container (as recommended), no prefix is required.</td></tr>
 		<tr><td>localCacheSize</td><td>As per normal location configuration.</td></tr>
 		<tr><td>indexable</td><td>Flag this location as being indexable by Azure Search. Should not be set to true for archive, temp, or image locations.</td></tr>
 	</tbody>

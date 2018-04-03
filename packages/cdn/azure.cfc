@@ -182,28 +182,6 @@
 		<cflog file="debug" text="deleting #arguments.file# #serializeJSON(application.fc.lib.error.getStack(bIgnoreJava=true))#">
 	</cffunction>
 
-
-	<cffunction name="getAzurePath" output="false" access="public" returntype="string" hint="Returns path to use for all Azure requests">
-		<cfargument name="config" type="struct" required="true" />
-		<cfargument name="file" type="string" required="true" />
-
-		<cfset var fullpath = arguments.file />
-
-		<cfif not left(fullpath,1) eq "/">
-			<cfset fullpath = "/" & fullpath />
-		</cfif>
-
-		<cfset fullpath = arguments.config.pathPrefix & fullpath />
-
-		<!--- URL encode the filename --->
-		<cfset fullpath = replacelist(urlencodedformat(fullpath),"%2F,%20,%2D,%2E,%5F,%27,%28,%29,%26,%5B,%5D,%21,%25,%40","/, ,-,.,_,',(,),&,[,],!,%,@")>
-		<cfset fullpath = replaceNoCase(fullpath, "%2C", ",", "all")>
-
-		<cfset fullpath = "azure://#arguments.config.storageKey#:#arguments.config.awsSecretKey#@#arguments.config.account##fullpath#" />
-
-		<cfreturn fullpath />
-	</cffunction>
-
 	<cffunction name="getURLPath" output="false" access="public" returntype="string" hint="Returns full internal path. Works for files and directories." ref="https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1">
 		<cfargument name="config" type="struct" required="true" />
 		<cfargument name="file" type="string" required="true" />
@@ -248,7 +226,7 @@
 			</cfif>
 
 			<cfif arguments.config.domainType eq "azure" or arguments.azurePath>
-				<cfset urlpath = "//#arguments.config.account#.azure.amazonaws.com" & urlpath />
+				<cfset urlpath = "//#arguments.config.account#.blob.core.windows.net" & urlpath />
 			<cfelse>
 				<cfset urlpath = "//" & arguments.config.account & ".blob.core.windows.net" & urlpath />
 			</cfif>
@@ -666,24 +644,13 @@
 	<cffunction name="sanitiseAzureURL" access="public" output="false" returntype="string">
 		<cfargument name="azureURL" type="string" required="true" />
 
-		<cfset var result = reReplace(arguments.azureURL, "(azure:\/\/)(.*?:.*?)(@.*)", "\1STRIPPEDACCESSKEYID:STRIPPEDAWSSECRETKEY\3")>
-
-		<cfreturn result />
+		<cfreturn arguments.azureURL />
 	</cffunction>
 
 	<cffunction name="sanitiseAzureConfig" access="public" output="false" returntype="struct">
 		<cfargument name="config" type="struct" required="true" />
 
-		<cfset var stResult = duplicate(arguments.config)>
-
-		<cfif structKeyExists(stResult, "storageKey")>
-			<cfset stResult.storageKey = "STRIPPEDACCESSKEYID">
-		</cfif>
-		<cfif structKeyExists(stResult, "awsSecretKey")>
-			<cfset stResult.awsSecretKey = "STRIPPEDAWSSECRETKEY">
-		</cfif>
-
-		<cfreturn stResult />
+		<cfreturn arguments.config />
 	</cffunction>
 
 	<cffunction name="makeRequest" returntype="any" access="public" output="false" hint="Makes the specified request to Azure">
