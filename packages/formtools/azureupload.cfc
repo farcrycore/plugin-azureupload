@@ -31,16 +31,12 @@
 		<cfscript>
 			var cdnLocation = "publicfiles";
 			var cdnPath = "";
-			var aclPermission = "public-read";
 
 			if (len(arguments.stMetadata.ftLocation) and arguments.stMetadata.ftLocation neq "auto") {
 				cdnLocation = arguments.stMetadata.ftLocation;
 			}
 			else if (arguments.stMetadata.ftSecure) {
 				cdnLocation = "privatefiles";
-			}
-			if (arguments.stMetadata.ftSecure) {
-				aclPermission = "private";
 			}
 
 			var cdnConfig = application.fc.lib.cdn.getLocation(cdnLocation);
@@ -350,4 +346,29 @@
 		</cfif>
 	</cffunction>
 	
+	<cffunction name="resolveLocationMetadata" access="public" output="false" returntype="struct">
+		<cfargument name="stMetadata" type="struct" required="true" />
+
+		<cfset stResult = {
+			"cdnLocation" = "publicfiles",
+			"cdnPath" = ""
+		} />
+
+		<cfif len(arguments.stMetadata.ftLocation) and arguments.stMetadata.ftLocation neq "auto">
+			<cfset stResult.cdnLocation = arguments.stMetadata.ftLocation />
+		<cfelseif arguments.stMetadata.ftSecure>
+			<cfset stResult.cdnLocation = "privatefiles" />
+		</cfif>
+
+		<cfset stResult["cdnConfig"] = application.fc.lib.cdn.getLocation(stResult.cdnLocation) />
+		<cfset stResult.cdnConfig.urlExpiry = 1800 />
+
+		<cfset stResult["fileUploadPath"] = stResult.cdnConfig.pathPrefix & arguments.stMetadata.ftDestination />
+		<cfif left(stResult.fileUploadPath, 1) == "/">
+			<cfset stResult.fileUploadPath = mid(stResult.fileUploadPath, 2, len(stResult.fileUploadPath)-1) />
+		</cfif>
+
+		<cfreturn stResult />
+	</cffunction>
+
 </cfcomponent> 

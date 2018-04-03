@@ -227,6 +227,12 @@ function azureupload($, plupload, options) {
 				uploader.settings.headers["x-ms-date"] = response.xmsdate;
 				uploader.settings.headers["x-ms-version"] = response.xmsversion;
 				uploader.settings.headers["x-ms-blob-type"] = "BlockBlob";
+				uploader.settings.headers["x-ms-meta-objectid"] = options.fc.objectid;
+				if (response.metadata) {
+					for (var k in response.metadata) {
+						uploader.settings.headers[k] = response.metadata[k];
+					}
+				}
 				uploader.settings.headers["Content-Type"] = getMIMEType(file.name);
 
 				// trigger the upload

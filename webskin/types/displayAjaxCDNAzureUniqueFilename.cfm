@@ -49,7 +49,8 @@
 	"uniquefilename": "#listLast(uniquefilename, "/")#",
 	"requestURL": "https://#cdnConfig.account#.blob.core.windows.net#path#?sv=2017-04-17&sr=b&sp=#signedpermissions#&se=#encodeForURL(signedexpiry)#&sig=#urlEncodedFormat(requestSignature)#",
 	"xmsdate": "#xmsDate#",
-	"xmsversion": "#xmsVersion#"
+	"xmsversion": "#xmsVersion#",
+	"metadata": {}
 }>
 
 <cfcontent reset="true">
