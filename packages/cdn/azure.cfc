@@ -352,7 +352,7 @@
 		<cfargument name="file" type="string" required="true" />
 		<cfargument name="metadata" type="struct" required="true" />
 
-		<cfset var key "" />
+		<cfset var key = "" />
 		<cfset var headers = {} />
 
 		<cfloop collection="#arguments.metadata#" item="key">
