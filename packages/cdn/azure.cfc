@@ -335,6 +335,10 @@
 		<cfargument name="datatype" type="string" required="false" default="text" options="text,binary,image" />
 		<cfargument name="quality" type="numeric" required="false" default="1" hint="This is only required for image writes" />
 
+		<cfif arguments.datatype eq "image">
+			<cfset arguments.data = ImageGetBlob(arguments.data)>
+		</cfif>
+
 		<cfset makeRequest(
 			config=arguments.config,
 			method="PUT",
