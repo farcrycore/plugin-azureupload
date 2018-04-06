@@ -354,7 +354,7 @@
 		<cflog file="#application.applicationname#_azure" text="Wrote [#arguments.config.name#] #sanitiseAzureURL(arguments.file)#" />
 	</cffunction>
 
-	<cffunction name="ioWriteMetadata" returntype="void" access="public" output="false" hint="Writes the specified data to a file">
+	<cffunction name="ioWriteMetadata" returntype="void" access="public" output="false" hint="Writes the specified data to a file" ref="https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-metadata">
 		<cfargument name="config" type="struct" required="true" />
 		<cfargument name="file" type="string" required="true" />
 		<cfargument name="metadata" type="struct" required="true" />
@@ -363,7 +363,7 @@
 		<cfset var headers = {} />
 
 		<cfloop collection="#arguments.metadata#" item="key">
-			<cfset headers["x-ms-meta-#key#"] = "true" />
+			<cfset headers["x-ms-meta-#key#"] = arguments.metadata[key] />
 		</cfloop>
 
 		<cfset makeRequest(
@@ -377,6 +377,32 @@
 		) />
 
 		<cflog file="#application.applicationname#_azure" text="Wrote [#arguments.config.name#] #sanitiseAzureURL(arguments.file)# metadata" />
+	</cffunction>
+
+	<cffunction name="ioReadMetadata" returntype="struct" access="public" output="false" hint="Writes the specified data to a file" ref="https://docs.microsoft.com/en-us/rest/api/storageservices/get-blob-metadata">
+		<cfargument name="config" type="struct" required="true" />
+		<cfargument name="file" type="string" required="true" />
+
+		<cfset var key = "" />
+		<cfset var headers = {} />
+
+		<cfset var stResult = makeRequest(
+			config=arguments.config,
+			method="GET",
+			path=getAbsolutePath(argumentCollection=arguments),
+			query={
+				"comp" = "metadata"
+			},
+			bMetadataOnly=true
+		) />
+
+		<cfloop collection="#stResult.responseheader#" item="key">
+			<cfif reFindNoCase("^x-ms-meta-", key)>
+				<cfset headers[mid(key, 11, len(key))] = stResult.responseheader[key] />
+			</cfif>
+		</cfloop>
+
+		<cfreturn headers />
 	</cffunction>
 
 	<cffunction name="ioReadFile" returntype="any" access="public" output="false" hint="Reads from the specified file">
@@ -518,7 +544,7 @@
 					"x-ms-copy-source"="https://#arguments.source_config.account#.blob.core.windows.net#getAbsolutePath(config=arguments.source_config, file=arguments.source_file)#"
 				}
 			) />
-			
+
 			<cflog file="#application.applicationname#_azure" text="Copied [#arguments.source_config.name#] #sanitiseAzureURL(arguments.source_file)# to [#arguments.dest_config.name#] #sanitiseAzureURL(arguments.dest_file)#" />
 
 		<cfelseif structkeyexists(arguments,"source_config")>
@@ -617,7 +643,7 @@
 
 	</cffunction>
 
-	<cffunction name="ioGetDirectoryListing" returntype="query" access="public" output="false" hint="Returns a query of the directory containing a 'file' column only. This filename will be equivilent to what is passed into other CDN functions.">
+	<cffunction name="ioGetDirectoryListing" returntype="query" access="public" output="false" hint="Returns a query of the directory containing a 'file' column only. This filename will be equivilent to what is passed into other CDN functions." ref="https://docs.microsoft.com/en-us/rest/api/storageservices/list-blobs">
 		<cfargument name="config" type="struct" required="true" />
 		<cfargument name="dir" type="string" required="true" />
 
@@ -668,6 +694,7 @@
 		<cfargument name="headers" type="struct" required="false" default="#structNew()#" />
 		<cfargument name="data" type="string" required="false" />
 		<cfargument name="dataFile" type="string" required="false" />
+		<cfargument name="bMetadataOnly" type="boolean" required="false" default="false" />
 
 		<cfset var bExists = false />
 		<cfset var signature = "" />
@@ -704,6 +731,7 @@
 		<cfset binarySignature = hmac(stringToSign, binaryKey, "HmacSHA256", "utf-8") />
 		<cfset signature = toBase64(binaryDecode(binarySignature, "hex")) />
 
+		<cfset resourcePath = replace(resourcePath, "##", "%23", "ALL") />
 		<cfloop collection="#arguments.query#" index="key">
 			<cfif find("?", resourcePath)>
 				<cfset resourcePath = resourcePath & "&" & key & "=" & urlEncodedFormat(arguments.query[key]) />
@@ -723,7 +751,7 @@
 		 	</cfif>
 		</cfhttp>
 
-		<cfif listFindNoCase("HEAD,DELETE", arguments.method)>
+		<cfif listFindNoCase("HEAD,DELETE", arguments.method) or arguments.bMetadataOnly>
 			<cfif NOT reFind("^(2\d\d|404) ", stResponse.statuscode)>
 				<cfset application.fapi.throw(
 					message="Error accessing Azure API: {1} {2}",
@@ -799,7 +827,13 @@
 		<cfargument name="config" type="struct" required="true" />
 		<cfargument name="path" type="string" required="true" />
 
-		<cfreturn replaceList("/#arguments.config.account##arguments.path#", " ", "%20") />
+		<cfset var dir = getDirectoryFromPath(arguments.path) />
+		<cfset var file = getFileFromPath(arguments.path) />
+
+		<cfset file = urlEncodedFormat(file) />
+		<cfset file = replaceList(file, "%2E,%5F,%2D", ".,_,-") />
+
+		<cfreturn "/" & arguments.config.account & dir & file />
 	</cffunction>
 
 	<cffunction name="dateToRFC3339" access="public" output="false" returntype="string">
@@ -812,35 +846,27 @@
 
 	<cffunction name="rfc3339ToDate" access="public" output="false" returntype="date">
 		<cfargument name="input" type="date" required="true" />
-		<cfargument name="includeTime" type="boolean" required="false" default="true" />
 
 		<cfset var sdf = "" />
 		<cfset var pos = "" />
 		<cfset var rdate = "" />
 
-		<cfif arguments.includeTime>
-			<cfif not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$", arguments.input)>
-				<cfthrow message="Date/time must be in the form yyyy-MM-ddTHH:mm:ss.SSSZ: #arguments.input#" />
-			</cfif>
-		<cfelse>
-			<cfif not reFind("^\d{4}-\d{2}-\d{2}$", arguments.input)>
-				<cfthrow message="Date must be in the form yyyy-MM-dd: #arguments.input#" />
-			</cfif>
+		<cfif not reFind("^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z)?$", arguments.input)>
+			<cfthrow message="Date/time must be in the form yyyy-MM-ddTHH:mm:ss.SSSZ or yyyy-MM-dd: #arguments.input#" />
 		</cfif>
 
-		<cfif arguments.includeTime>
-			<cfif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", arguments.input)>
-				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss'Z'") />
-			<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1}Z$", arguments.input)>
-				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.S'Z'") />
-			<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{2}Z$", arguments.input)>
-				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SS'Z'") />
-			<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$", arguments.input)>
-				<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") />
-			</cfif>
-		<cfelse>
+		<cfif reFind("^\d{4}-\d{2}-\d{2}$", arguments.input)>
 			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd") />
+		<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", arguments.input)>
+			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss'Z'") />
+		<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1}Z$", arguments.input)>
+			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.S'Z'") />
+		<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{2}Z$", arguments.input)>
+			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SS'Z'") />
+		<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$", arguments.input)>
+			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") />
 		</cfif>
+
 		<cfset pos = CreateObject("java", "java.text.ParsePosition").init(0) />
 
 		<cfset rdate = sdf.parse(arguments.input, pos) />

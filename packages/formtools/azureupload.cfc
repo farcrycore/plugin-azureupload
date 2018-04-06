@@ -27,7 +27,7 @@
 
 		<cfset var html = "">
 		<cfset var item = "">
-		<cfset var fileMeta = resolveLocationMetadata(argumentCollection=arguments) />
+		<cfset var fileMeta = application.fc.lib.azurecdn.resolveLocationMetadata(argumentCollection=arguments) />
 
 		<cfset var ftMin = 0 />
 		<cfset var ftMax = arguments.stMetadata.ftMax />
@@ -325,55 +325,6 @@
 		<cfelse>
 			<cfreturn application.fc.lib.cdn.ioCopyFile(source_location=currentlocation,source_file=currentfilename,dest_location="publicfiles",dest_file=newfilename,nameconflict="makeunique",uniqueamong="privatefiles,publicfiles")>
 		</cfif>
-	</cffunction>
-	
-	<cffunction name="resolveLocationMetadata" access="public" output="false" returntype="struct">
-		<cfargument name="stMetadata" type="struct" required="true" />
-
-		<cfset stResult = {
-			"cdnLocation" = "publicfiles",
-			"cdnPath" = ""
-		} />
-
-		<cfif structKeyExists(arguments.stMetadata, "ftLocation") and arguments.stMetadata.ftLocation neq "auto">
-			<cfset stResult.cdnLocation = arguments.stMetadata.ftLocation />
-		<cfelseif structKeyExists(arguments.stMetadata, "ftSecure") and arguments.stMetadata.ftSecure>
-			<cfset stResult.cdnLocation = "privatefiles" />
-		</cfif>
-
-		<cfset stResult["cdnConfig"] = application.fc.lib.cdn.getLocation(stResult.cdnLocation) />
-		<cfset stResult.cdnConfig.urlExpiry = 1800 />
-
-		<cfset stResult["fileUploadPath"] = stResult.cdnConfig.pathPrefix & arguments.stMetadata.ftDestination />
-		<cfif left(stResult.fileUploadPath, 1) == "/">
-			<cfset stResult.fileUploadPath = mid(stResult.fileUploadPath, 2, len(stResult.fileUploadPath)-1) />
-		</cfif>
-
-		<cfset stResult["uploadEndpoint"] = "https://#stResult.cdnConfig.account#.blob.core.windows.net/#stResult.cdnConfig.container#" />
-
-		<cfset stResult["indexable"] = stResult.cdnConfig.indexable and arguments.stMetadata.indexable />
-
-		<cfreturn stResult />
-	</cffunction>
-
-	<cffunction name="updateTags" access="public" output="true" returntype="void">
-		<cfargument name="stObject" required="true" type="struct" hint="The object of the record that this field is part of.">
-		<cfargument name="stMetadata" required="true" type="struct" hint="This is the metadata that is either setup as part of the type.cfc or overridden when calling ft:object by using the stMetadata argument.">
-
-		<cfset var fileMeta = resolveLocationMetadata(argumentCollection=arguments) />
-
-		<cfif not len(arguments.stObject[arguments.stMetadata.name])>
-			<cfreturn />
-		</cfif>
-
-		<cfset application.fc.lib.cdn.cdns.azure.ioWriteMetadata(
-			config=fileMeta.cdnConfig,
-			file=arguments.stObject[arguments.stMetadata.name],
-			metadata={
-				"objectid"=arguments.stObject.objectid,
-				"AzureSearch_Skip": fileMeta.indexable ? "false" : "true"
-			}
-		) />
 	</cffunction>
 
 </cfcomponent>
