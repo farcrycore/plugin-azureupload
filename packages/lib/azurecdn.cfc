@@ -94,7 +94,7 @@ component {
 		var thismarker = "";
 
 		// Figure out what the request is, i.e. which location, what marker
-		if (arguments.marker eq "start") {
+		if (arguments.marker eq "start" or arguments.marker eq "") {
 			thislocation = listFirst(locations);
 			thismarker = "";
 		}

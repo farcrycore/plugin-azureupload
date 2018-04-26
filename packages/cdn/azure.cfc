@@ -841,7 +841,7 @@
 
 		<cfset var asUTC = dateConvert("local2utc", arguments.d) />
 
-		<cfreturn dateformat(asUTC,"yyyy-mm-dd") & "T" & timeformat(asUTC,"HH:mm:ss") & "Z" />
+		<cfreturn dateformat(asUTC,"yyyy-mm-dd") & "T" & timeformat(asUTC,"HH:mm:ss.lll") & "Z" />
 	</cffunction>
 
 	<cffunction name="rfc3339ToDate" access="public" output="false" returntype="date">
@@ -851,7 +851,7 @@
 		<cfset var pos = "" />
 		<cfset var rdate = "" />
 
-		<cfif not reFind("^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z)?$", arguments.input)>
+		<cfif not reFind("^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{1,4})?Z)?$", arguments.input)>
 			<cfthrow message="Date/time must be in the form yyyy-MM-ddTHH:mm:ss.SSSZ or yyyy-MM-dd: #arguments.input#" />
 		</cfif>
 
@@ -865,6 +865,8 @@
 			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SS'Z'") />
 		<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$", arguments.input)>
 			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") />
+		<cfelseif reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{4}Z$", arguments.input)>
+			<cfset sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SSSS'Z'") />
 		</cfif>
 
 		<cfset pos = CreateObject("java", "java.text.ParsePosition").init(0) />
