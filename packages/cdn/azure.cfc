@@ -337,6 +337,8 @@
 
 		<cfif arguments.datatype eq "image">
 			<cfset arguments.data = ImageGetBlob(arguments.data)>
+		<cfelseif arguments.datatype eq "text">
+			<cfset arguments.data = ToBinary(ToBase64(arguments.data))>
 		</cfif>
 
 		<cfset makeRequest(
