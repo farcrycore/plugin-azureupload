@@ -212,7 +212,7 @@
 			<cfset urlpath = replacelist(urlencodedformat(urlpath),"%2F,%2B,%2D,%2E,%5F,%27","/, ,-,.,_,'")>
 
 			<cfif structkeyexists(arguments.config,"security") and arguments.config.security eq "private">
-				<cfset expiryDate = dateToRFC3339(DateAdd("s", arguments.config.urlExpiry, now())) />
+				<cfset expiryDate = dateToRFC3339(d=DateAdd("s", arguments.config.urlExpiry, now()), bMS=false) />
 
 				<cfset binaryKey = binaryDecode(arguments.config.storageKey, "base64") />
 
@@ -840,10 +840,17 @@
 
 	<cffunction name="dateToRFC3339" access="public" output="false" returntype="string">
 		<cfargument name="d" type="date" required="true" />
+		<cfargument name="bMS" type="boolean" required="false" default="true" />
 
 		<cfset var asUTC = dateConvert("local2utc", arguments.d) />
+		<cfset var dFormat = "yyyy-mm-dd" />
+		<cfset var tFormat = "HH:mm:ss" />
 
-		<cfreturn dateformat(asUTC,"yyyy-mm-dd") & "T" & timeformat(asUTC,"HH:mm:ss.lll") & "Z" />
+		<cfif arguments.bMS>
+			<cfset tFormat = tFormat & ".lll" />
+		</cfif>
+
+		<cfreturn dateformat(asUTC, dFormat) & "T" & timeformat(asUTC, tFormat) & "Z" />
 	</cffunction>
 
 	<cffunction name="rfc3339ToDate" access="public" output="false" returntype="date">
