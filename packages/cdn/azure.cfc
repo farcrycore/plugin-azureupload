@@ -217,7 +217,7 @@
 				<cfset binaryKey = binaryDecode(arguments.config.storageKey, "base64") />
 
 				<!--- Create a canonical string to send --->
-				<cfset signature = "#permission#\n\n#expiryDate#\n/blob#getCanonicalResource(config=arguments.config, path=urlpath)#\n\n\n\n2015-04-05\n\n\n\n\n" />
+				<cfset signature = "#permission#\n\n#expiryDate#\n/blob#getCanonicalResource(config=arguments.config, path=replace(urlpath,"%20"," ","all"))#\n\n\n\n2015-04-05\n\n\n\n\n" />
 
 				<!--- Replace "\n" with "chr(10) to get a correct digest --->
 				<cfset signature = replace(signature,"\n","#chr(10)#","all") />
@@ -833,7 +833,7 @@
 		<cfset var file = getFileFromPath(arguments.path) />
 
 		<cfset file = urlEncodedFormat(file) />
-		<cfset file = replaceList(file, "%2E,%5F,%2D", ".,_,-") />
+		<cfset file = replaceList(file, "%2E,%5F,%2D,%20", ".,_,-, ") />
 
 		<cfreturn "/" & arguments.config.account & dir & file />
 	</cffunction>
