@@ -306,9 +306,14 @@
 		<cfargument name="config" type="struct" required="true" />
 		<cfargument name="file" type="string" required="true" />
 
-		<cfset var stResponse = makeRequest(config=arguments.config, method="HEAD", path=getAbsolutePath(argumentCollection=arguments)) />
+		<cfset var size = 0>
 
-		<cfreturn round(stResponse.responseheader["Content-Length"]) />
+		<cfset var stResponse = makeRequest(config=arguments.config, method="HEAD", path=getAbsolutePath(argumentCollection=arguments)) />
+		<cfif structKeyExists(stResponse, "responseheader") AND structKeyExists(stResponse.responseheader, "Content-Length")>
+			<cfset size = round(stResponse.responseheader["Content-Length"])>
+		</cfif>
+
+		<cfreturn size />
 	</cffunction>
 
 	<cffunction name="ioGetFileLocation" returntype="struct" output="false" hint="Returns serving information for the file - either method=redirect + path=URL OR method=stream + path=local path">
