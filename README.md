@@ -16,7 +16,7 @@ The Azure storage account / container CORS policy must allow GET and PUT for the
 
 The following settings should be included in the `setLocation` configuration:
 
-<html>
+<table>
 	<thead>
 		<tr>
 			<th>Key</th>
@@ -35,4 +35,4 @@ The following settings should be included in the `setLocation` configuration:
 		<tr><td>localCacheSize</td><td>As per normal location configuration.</td></tr>
 		<tr><td>indexable</td><td>Flag this location as being indexable by Azure Search. Should not be set to true for archive, temp, or image locations.</td></tr>
 	</tbody>
-</html>
+</table>
