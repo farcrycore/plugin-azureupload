@@ -1,6 +1,6 @@
-# Azure Upload Plugin for FarCry Core 7.2.x
+# Azure Upload Plugin
 
-This is a temporary plugin which adds two new formtools which support uploading direct to Azure Blob Storage.
+A temporary plugin which adds two new formtools which support uploading direct to Azure Blob Storage.
 
 It includes an `azureupload` formtool for single file properties and an `azurearrayupload` formtool
 for array properties (multiple file uploads using related objects).
