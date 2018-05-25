@@ -8,6 +8,14 @@ for array properties (multiple file uploads using related objects).
 These features will eventually be integrated into the image and file formtools in Core, so this
 plugin is intended as a stop gap alternative until then.
 
+**This plugin is compatible with FarCry 7.2.x and over.**
+
+Azure Upload Plugin is available under LGPL and compatible with the open source and commercial licenses of FarCry Core.
+
+> **Massively scalable object storage for unstructured data**
+With exabytes of capacity and massive scalability, Blob Storage stores from hundreds to billions of objects in hot, cool or archive tiers, depending on how often data access is needed. Store any type of unstructured data – images, videos, audio, documents and more – easily and cost-effectively.
+https://azure.microsoft.com/en-au/services/storage/blobs/
+
 ## Setup
 
 The project must be using Azure for all file storage.
